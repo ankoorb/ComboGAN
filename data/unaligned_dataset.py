@@ -1,9 +1,14 @@
-import os.path, glob
-import torchvision.transforms as transforms
-from data.base_dataset import BaseDataset, get_transform
-from data.image_folder import make_dataset
-from PIL import Image
+import os
+import glob
+import h5py
 import random
+import numpy as np
+from scipy.misc import bytescale
+
+from data.image_folder import make_dataset
+from data.base_dataset import BaseDataset, get_transform
+
+
 
 class UnalignedDataset(BaseDataset):
     def __init__(self, opt):
@@ -17,18 +22,27 @@ class UnalignedDataset(BaseDataset):
         self.paths = [sorted(make_dataset(d)) for d in self.dirs]
         self.sizes = [len(p) for p in self.paths]
 
-    def load_image(self, dom, idx):
+    def read_hdf5(self, dom, idx, key='data'):
         path = self.paths[dom][idx]
-        img = Image.open(path).convert('RGB')
+        with h5py.File(path, 'r') as f_in:
+            img = np.squeeze(np.array(f_in[key])).astype(np.float32)
+
+        # Gray scale add channel axis
+        if len(img.shape) == 2:
+            img = img[:, :, np.newaxis]
+            img = bytescale(img)  # Converts [0, 1] to [0, 255]
+            img = np.concatenate((img, img, img), axis=2)
+
         img = self.transform(img)
         return img, path
 
     def __getitem__(self, index):
         if not self.opt.isTrain:
             if self.opt.serial_test:
-                for d,s in enumerate(self.sizes):
+                for d, s in enumerate(self.sizes):
                     if index < s:
-                        DA = d; break
+                        DA = d
+                        break
                     index -= s
                 index_A = index
             else:
@@ -39,13 +53,18 @@ class UnalignedDataset(BaseDataset):
             DA, DB = random.sample(range(len(self.dirs)), 2)
             index_A = random.randint(0, self.sizes[DA] - 1)
 
-        A_img, A_path = self.load_image(DA, index_A)
+        A_img, A_path = self.read_hdf5(DA, index_A)
         bundle = {'A': A_img, 'DA': DA, 'path': A_path}
 
         if self.opt.isTrain:
             index_B = random.randint(0, self.sizes[DB] - 1)
-            B_img, _ = self.load_image(DB, index_B)
-            bundle.update( {'B': B_img, 'DB': DB} )
+            B_img, B_path = self.read_hdf5(DB, index_B)
+
+            # Case where A_path == B_path
+            while A_path == B_path:
+                B_img, B_path = self.read_hdf5(DB, index_B)
+
+            bundle.update({'B': B_img, 'DB': DB})
 
         return bundle
 
@@ -56,3 +75,4 @@ class UnalignedDataset(BaseDataset):
 
     def name(self):
         return 'UnalignedDataset'
+

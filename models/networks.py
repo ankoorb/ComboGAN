@@ -252,6 +252,7 @@ class NLayerDiscriminator(nn.Module):
         self.gpu_ids = gpu_ids
         self.blur_fn = blur_fn
         self.gray_fn = lambda x: (.299*x[:,0,:,:] + .587*x[:,1,:,:] + .114*x[:,2,:,:]).unsqueeze_(1)
+        #self.gray_fn = lambda x: x
 
         self.model_gray = self.model(1, ndf, n_layers, norm_layer)
         self.model_rgb = self.model(input_nc, ndf, n_layers, norm_layer)
@@ -295,6 +296,7 @@ class NLayerDiscriminator(nn.Module):
         return SequentialOutput(*sequences)
 
     def forward(self, input):
+        #print('"input shape for gray_fn": {}'.format(input.shape))
         luminance, blurred_rgb = self.gray_fn(input), self.blur_fn(input)
 
         if len(self.gpu_ids) and isinstance(input.data, torch.cuda.FloatTensor):

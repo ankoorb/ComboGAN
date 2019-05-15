@@ -12,8 +12,9 @@ class BaseDataset(data.Dataset):
     def initialize(self, opt):
         pass
 
+
 def get_transform(opt):
-    transform_list = []
+    transform_list = [transforms.ToPILImage()]
     if 'resize' in opt.resize_or_crop:
         transform_list.append(transforms.Resize(opt.loadSize, Image.BICUBIC))
 
@@ -23,7 +24,10 @@ def get_transform(opt):
         if not opt.no_flip:
             transform_list.append(transforms.RandomHorizontalFlip())
 
-    transform_list += [transforms.ToTensor(),
-                       transforms.Normalize((0.5, 0.5, 0.5),
-                                            (0.5, 0.5, 0.5))]
+    transform_list += [transforms.ToTensor()]
+
+    if opt.normalize:
+        # NOTE: mean and std are hard coded
+        transform_list += [transforms.Normalize((0.48, 0.48, 0.48), (0.24, 0.24, 0.24))]
     return transforms.Compose(transform_list)
+

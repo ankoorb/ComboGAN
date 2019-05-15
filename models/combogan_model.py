@@ -26,6 +26,7 @@ class ComboGANModel(BaseModel):
                                       self.n_domains, opt.norm, opt.use_dropout, self.gpu_ids)
         if self.isTrain:
             blur_fn = lambda x : torch.nn.functional.conv2d(x, self.Tensor(util.gkern_2d()), groups=3, padding=2)
+            #blur_fn = lambda x: torch.nn.functional.conv2d(x, self.Tensor(util.gkern_2d()), groups=1, padding=2)
             self.netD = networks.define_D(opt.output_nc, opt.ndf, opt.netD_n_layers,
                                           self.n_domains, blur_fn, opt.norm, self.gpu_ids)
 

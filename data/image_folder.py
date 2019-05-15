@@ -9,29 +9,15 @@ import torch.utils.data as data
 
 from PIL import Image
 import os
-import os.path
-
-IMG_EXTENSIONS = [
-    '.jpg', '.JPG', '.jpeg', '.JPEG',
-    '.png', '.PNG', '.ppm', '.PPM', '.bmp', '.BMP',
-]
 
 
-def is_image_file(filename):
-    return any(filename.endswith(extension) for extension in IMG_EXTENSIONS)
-
-
-def make_dataset(dir):
+def make_dataset(txt_file, max_dataset_size=float("inf")):
+    assert os.path.exists(txt_file), '%s is not a valid file' % txt_file
     images = []
-    assert os.path.isdir(dir), '%s is not a valid directory' % dir
-
-    for root, _, fnames in sorted(os.walk(dir)):
-        for fname in fnames:
-            if is_image_file(fname):
-                path = os.path.join(root, fname)
-                images.append(path)
-
-    return images
+    with open(txt_file, 'r') as f_in:
+        for line in f_in:
+            images.append(line.strip())
+    return images[:min(max_dataset_size, len(images))]
 
 
 def default_loader(path):
@@ -66,3 +52,4 @@ class ImageFolder(data.Dataset):
 
     def __len__(self):
         return len(self.imgs)
+
